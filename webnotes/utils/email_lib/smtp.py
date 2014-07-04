@@ -12,12 +12,15 @@ from webnotes import conf
 from webnotes import msgprint
 from webnotes.utils import cint, expand_partial_links
 import email.utils
+import base64
+import json
 
 class OutgoingEmailError(webnotes.ValidationError): pass
 
-def get_email(recipients, sender='', msg='', subject='[No Subject]', text_content = None, footer=None):
+def get_email(recipients, sender='', msg='', subject='[No Subject]', text_content = None, footer=None,doctype=None):
+
 	"""send an html email as multipart with attachments and all"""
-	email = EMail(sender, recipients, subject)
+	email = EMail(sender, recipients, subject,doctype)
 	if (not '<br>' in msg) and (not '<p>' in msg) and (not '<div' in msg):
 		msg = msg.replace('\n', '<br>')
 	email.set_html(msg, text_content, footer=footer)
@@ -30,7 +33,7 @@ class EMail:
 	Also provides a clean way to add binary `FileData` attachments
 	Also sets all messages as multipart/alternative for cleaner reading in text-only clients
 	"""
-	def __init__(self, sender='', recipients=[], subject='', alternative=0, reply_to=None):
+	def __init__(self, sender='', recipients=[], subject='',doctype='', alternative=0, reply_to=None):
 		from email.mime.multipart import MIMEMultipart
 		from email import Charset
 		Charset.add_charset('utf-8', Charset.QP, Charset.QP, 'utf-8')
@@ -52,6 +55,7 @@ class EMail:
 		self.msg_root.attach(self.msg_multipart)
 		self.cc = []
 		self.html_set = False
+		self.doctype=doctype
 	
 	def set_html(self, message, text_content = None, footer=None):
 		"""Attach message in the html portion of multipart/alternative"""
@@ -219,7 +223,7 @@ class EMail:
 		
 		import smtplib
 		try:
-			smtpserver = SMTPServer()
+			smtpserver = SMTPServer(self.doctype)
 			if hasattr(smtpserver, "always_use_login_id_as_sender") and \
 				cint(smtpserver.always_use_login_id_as_sender) and smtpserver.login:
 				if not self.reply_to:
@@ -239,16 +243,31 @@ class EMail:
 			raise
 
 class SMTPServer:
-	def __init__(self, login=None, password=None, server=None, port=None, use_ssl=None):
+	def __init__(self,doctype='', login=None, password=None, server=None, port=None, use_ssl=None):
 		import webnotes.model.doc
 		from webnotes.utils import cint
 
+		es = None
+		self.flag=False
+		#webnotes.errprint("in the SMTPSER")
+		#webnotes.errprint(doctype)
+
 		# get defaults from control panel
-		try:
+		"""try:
 			es = webnotes.model.doc.Document('Email Settings','Email Settings')
 		except webnotes.DoesNotExistError:
+			es = None"""
+
+		try:
+			if doctype=="Email Inbox" or doctype=="Compose Mail":
+				#webnotes.errprint("in the if of Email Document")
+				self.flag=True
+			else:
+				es = webnotes.model.doc.Document('Email Settings','Email Settings')
+		except webnotes.DoesNotExistError:
 			es = None
-		
+
+	
 		self._sess = None
 		if server:
 			self.server = server
@@ -263,6 +282,17 @@ class SMTPServer:
 			self.login = es.mail_login
 			self.password = es.mail_password
 			self.always_use_login_id_as_sender = es.always_use_login_id_as_sender
+
+		elif self.flag:
+			#webnotes.errprint("in the true flag")
+			self.server = "smtp.gmail.com"
+			self.port = 587
+			self.use_ssl = 1
+			self.login=webnotes.session.user
+			# webnotes.errprint(self.login)
+			acc_token=webnotes.conn.sql("""select response from `tabProfile` where name ='%s'"""%(self.login),as_list=1)
+			# webnotes.errprint(access_token)
+			self.access_token=acc_token[0][0]
 		else:
 			self.server = conf.get("mail_server") or ""
 			self.port = conf.get("mail_port") or None
@@ -297,12 +327,13 @@ class SMTPServer:
 				err_msg = 'Could not connect to outgoing email server'
 				webnotes.msgprint(err_msg)
 				raise webnotes.OutgoingEmailError, err_msg
+			"""	
 		
 			if self.use_ssl: 
 				self._sess.ehlo()
 				self._sess.starttls()
 				self._sess.ehlo()
-
+		
 			if self.login:
 				ret = self._sess.login((self.login or "").encode('utf-8'), 
 					(self.password or "").encode('utf-8'))
@@ -312,7 +343,37 @@ class SMTPServer:
 					msgprint(ret[1])
 					raise webnotes.OutgoingEmailError, ret[1]
 
+			return self._sess"""
+				
+
+			if self.login:
+				#webnotes.errprint("in the self.login")
+				if self.flag:
+					auth_string=self.GenerateOAuth2String(self.login,self.access_token,base64_encode=False)
+					if auth_string:
+						#webnotes.errprint(auth_string)
+						self.TestSmtpAuthentication(self.login,auth_string)
+					
+				else:
+					#webnotes.errprint("in the else of session")
+					#self.login='pranali.k@indictranstech.com'
+					#self.password='indictrans'
+					
+					if self.use_ssl:
+						self._sess.ehlo()
+						self._sess.starttls()
+						self._sess.ehlo()
+
+					ret = self._sess.login((self.login or "").encode('utf-8'), 
+						(self.password or "").encode('utf-8'))
+
+					# check if logged correctly
+					if ret[0]!=235:
+						msgprint(ret[1])
+						raise webnotes.OutgoingEmailError, ret[1]
+
 			return self._sess
+
 			
 		except _socket.error:
 			# Invalid mail server -- due to refusing connection
@@ -327,3 +388,32 @@ class SMTPServer:
 				Please contact us at support@erpnext.com')
 			raise
 	
+
+
+	def GenerateOAuth2String(self,username, access_token, base64_encode=True):
+		#webnotes.errprint("in the gener Oauth string")
+
+		#Generates an IMAP OAuth2 authentication string."""
+
+		import imaplib	  
+		auth_string = 'user=%s\1auth=Bearer %s\1\1' % (username, access_token)
+		if base64_encode:
+			auth_string = base64.b64encode(auth_string)
+		return auth_string	
+
+
+	def TestSmtpAuthentication(self,user, auth_string):
+		#webnotes.errprint("in the TestSmtpAuthentication")
+		# """Authenticates to SMTP with the given auth_string.
+		# smtp_conn = smtplib.SMTP('smtp.gmail.com', 587)
+		self._sess.set_debuglevel(True)
+		self._sess.ehlo('test')	
+		self._sess.starttls()
+		self._sess.ehlo('test')	
+		self._sess.docmd('AUTH', 'XOAUTH2 ' + base64.b64encode(auth_string))
+		# webnotes.errprint(self._sess)
+		return self._sess	
+
+
+
+

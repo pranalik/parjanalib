@@ -42,11 +42,13 @@ wn.ui.form.Attachments = Class.extend({
 
 		var attachments = this.get_attachments();
 		var file_names = keys(attachments).sort();
-		
+		var dict_keys = []; 
+		for(var key in attachments) dict_keys.push(key); 
+		file_names=dict_keys.sort(function(a,b){return new Date(attachments[a]) - new Date(attachments[b])});		
 		// add attachment objects
 		if(file_names.length) {
 			for(var i=0; i<file_names.length; i++) {
-				this.add_attachment(file_names[i], attachments);
+				this.add_attachment(file_names[i], attachments,attachments[file_names[i]]);
 			}
 		} else {
 			$('<p class="text-muted">' + wn._("None") + '</p>').appendTo(this.$list);
@@ -58,17 +60,20 @@ wn.ui.form.Attachments = Class.extend({
 	get_attachments: function() {
 		return this.frm.get_docinfo().attachments;
 	},
-	add_attachment: function(filename, attachments) {
+	add_attachment: function(filename, attachments,file_name) {
 		var fileid = attachments[filename];
+		s=file_name.split(':')
+                file_name=s[0]+':'+s[1]+':'+s[2][0]+s[2][1]
 		
 		var me = this;
 		var $attach = $(repl('<div class="alert alert-info" style="margin-bottom: 7px">\
 			<span style="display: inline-block; width: 90%; \
 				text-overflow: ellipsis; white-space: nowrap; overflow: hidden;">\
 				<i class="icon-file"></i> <a href="%(href)s"\
-					target="_blank" title="%(filename)s">%(filename)s</a></span><a href="#" class="close">&times;</a>\
+					target="_blank" title="%(filename)s">%(filename)s</a><br><h>%(file_name)s</h></span><a href="#" class="close">&times;</a>\
 			</div>', {
 				filename: filename,
+				file_name: file_name,
 				href: wn.utils.get_file_link(filename)
 			}))
 			.appendTo(this.$list)

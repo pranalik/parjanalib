@@ -2,6 +2,9 @@
 # MIT License. See license.txt 
 
 from __future__ import unicode_literals
+from webnotes.model.doc import make_autoname
+from webnotes.utils import cstr, cint, get_site_path,now
+import datetime
 """
 record of files
 
@@ -14,7 +17,10 @@ from webnotes import conf
 class DocType():
 	def __init__(self, d, dl):
 		self.doc, self.doclist = d, dl
-		
+	
+	def autoname(self):
+		self.doc.name = make_autoname(datetime.datetime.strptime(now(),'%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%d %H:%M:%S'))
+	
 	def before_insert(self):
 		webnotes.local.rollback_observers.append(self)
 	

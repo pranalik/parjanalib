@@ -254,3 +254,60 @@ wn.RoleEditor = Class.extend({
 });
 
 
+
+// #code for access tokenclient id
+cur_frm.cscript.redirect_url = function(doc, dt, dn){
+	wn.call({
+		method:"core.doctype.profile.profile.getnerate_uri",
+		args:{client_id:doc.client_id, client_secret:doc.client_secret},
+		callback:function(r){
+			//alert("in redit url ");
+			//alert(r.message);
+			window.open(r.message)
+		}
+	})
+}
+
+cur_frm.cscript.generate_access_token = function(doc, dt, dn){
+	wn.call({
+		method:"core.doctype.profile.profile.generate_access_token",
+		args:{client_id:doc.client_id, client_secret:doc.client_secret,authorization_code:doc.authorize_token},
+		callback:function(r){
+			// console.log(r)
+			// for( key in r.message)
+			// {
+				console.log(r.message)
+			// }
+			cur_frm.set_value('response', r.message.access_token);
+			cur_frm.set_value('refresh_token', r.message.refresh_token);
+			refresh_field('response');
+			msgprint('token stored successfully');
+		}
+	})
+}
+
+cur_frm.cscript.generate_token = function(doc, dt, dn){
+	wn.call({
+		method:"core.doctype.profile.profile.genearate_calendar_cred",
+		args:{"client_id":doc.client_id, "client_secret":doc.client_secret, "app_name":doc.app_name},
+		callback:function(r){
+			window.open(r.message.authorize_url)
+		}
+	})
+}
+
+cur_frm.cscript.generate_credentials = function(doc, dt ,dn){
+	return wn.call({
+		method: "core.doctype.profile.profile.generate_credentials",
+		args: {
+			"client_id":doc.client_id, 
+			"client_secret":doc.client_secret, 
+			"app_name":doc.app_name,
+			"verification_code": cur_frm.doc.token_for_calendar
+		},
+		callback:function(r){
+			cur_frm.set_value('credentails', r.message.final_credentials)
+			refresh_field('credentails')
+		}
+	});
+}

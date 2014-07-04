@@ -5,6 +5,28 @@ from __future__ import unicode_literals
 import webnotes, json
 from webnotes.utils import cint, now, cstr
 from webnotes import _
+import smtplib
+import sys
+import urllib
+from webnotes.utils import cint, now, cstr
+from webnotes import _
+import base64
+import imaplib
+import json
+from optparse import OptionParser
+import smtplib
+import sys
+import urllib
+import gdata
+from apiclient.discovery import build
+from oauth2client.file import Storage
+from oauth2client.tools import run
+import oauth2client.client
+from oauth2client.client import Credentials
+from oauth2client.client import OAuth2WebServerFlow
+from oauth2client.client import flow_from_clientsecrets
+from oauth2client.client import FlowExchangeError
+import logging
 
 class DocType:
 	def __init__(self, doc, doclist):
@@ -421,3 +443,186 @@ def get_active_website_users():
 		where enabled = 1 and user_type = 'Website User'
 		and hour(timediff(now(), last_login)) < 72""")[0][0]
 
+ 
+# ------------------------code for oauth settings--------------------------------------------------------------------------
+
+# The URL root for accessing Google Accounts.
+GOOGLE_ACCOUNTS_BASE_URL = 'https://accounts.google.com'
+
+
+# Hardcoded dummy redirect URI for non-web apps.
+REDIRECT_URI = 'urn:ietf:wg:oauth:2.0:oob'
+
+@webnotes.whitelist()
+def getnerate_uri(client_id, client_secret):
+	#webnotes.errprint('in the profile.py')
+	scope='https://mail.google.com/'
+	#webnotes.errprint(client_id)
+	s=GeneratePermissionUrl(client_id, scope)
+	#webnotes.errprint(s)
+        return s
+
+
+	#return GeneratePermissionUrl(client_id, scope)
+	# authorization_code = raw_input('Enter verification code: ')
+	# response = AuthorizeTokens(options.client_id, options.client_secret, authorization_code)
+
+@webnotes.whitelist()
+def generate_access_token(client_id, client_secret, authorization_code):
+	return AuthorizeTokens(client_id,client_secret,authorization_code)
+	
+	
+
+def GeneratePermissionUrl(client_id, scope='https://mail.google.com/'):
+	#webnotes.errprint('in the generate url')
+	params = {}
+	params['client_id'] = client_id
+	params['redirect_uri'] = REDIRECT_URI
+	params['scope'] = scope
+	params['response_type'] = 'code'
+	return '%s?%s' % (AccountsUrl('o/oauth2/auth'),
+	                FormatUrlParams(params))
+
+def FormatUrlParams(params):
+	param_fragments = []
+	for param in sorted(params.iteritems(), key=lambda x: x[0]):
+		param_fragments.append('%s=%s' % (param[0], UrlEscape(param[1])))
+	return '&'.join(param_fragments)
+
+def AccountsUrl(command):
+	return '%s/%s' % (GOOGLE_ACCOUNTS_BASE_URL, command)
+
+def AuthorizeTokens(client_id, client_secret, authorization_code):
+	import urllib
+	params = {}
+	params['client_id'] = client_id
+	params['client_secret'] = client_secret
+	params['code'] = authorization_code
+	params['redirect_uri'] = REDIRECT_URI
+	params['grant_type'] = 'authorization_code'
+	request_url = AccountsUrl('o/oauth2/token')
+	#webnotes.errprint(request_url)
+	response = urllib.urlopen(request_url, urllib.urlencode(params)).read()
+	#webnotes.errprint("authorised token")
+	#webnotes.errprint(response)
+
+	return json.loads(response)
+
+  
+def UrlEscape(text):
+	import urllib
+
+  # See OAUTH 5.1 for a definition of which characters need to be escaped.
+	return urllib.quote(text, safe='~-._')
+
+  
+def RefreshToken(client_id, client_secret, refresh_token):
+	params = {}
+	params['client_id'] = client_id
+	params['client_secret'] = client_secret
+	params['refresh_token'] = refresh_token
+	params['grant_type'] = 'refresh_token'
+	request_url = AccountsUrl('o/oauth2/token')
+	try:
+		return urllib.urlopen(request_url, urllib.urlencode(params)).read()
+	except IOError, error_code :
+		if error_code[0] == "http error" :
+			if error_code[1] == 401 : 	# password protected site
+				return '' 
+
+def Refresh_Token():
+	print "in the Refresh_Token"
+	refresh_failed = []
+	token_details = get_token_details()
+
+	response_details = webnotes.conn.sql("""select refresh_token,name from tabProfile 
+		where name like '%@%' and response is not null 
+			and refresh_token is not null""",as_dict=1)
+
+	if response_details and token_details:
+		for res in response_details:
+			refresh_response = RefreshToken(token_details['client_id'], token_details['client_secret'], res['refresh_token'])
+			if refresh_response:
+				refresh_response = json.loads(refresh_response)
+				if refresh_response.get('access_token'):
+					webnotes.conn.sql("update tabProfile set response='%s' where name ='%s'"%(refresh_response.get('access_token'),res['name']))
+					webnotes.conn.sql('commit')
+				else: 
+					refresh_failed.append(res['name'])
+
+	if len(refresh_failed) > 0:
+		make_log_entry(refresh_failed)
+
+def get_token_details():
+	token_dict = {}
+
+	token_details = webnotes.conn.sql("""select value from `tabSingles` 
+		where doctype='OAuth Settings' and field in ('client_id','client_secret')""",as_list=1)
+
+	if token_details:
+		token_dict['client_id']=str(token_details[0][0])
+		token_dict['client_secret']=str(token_details[1][0])
+
+	return token_dict
+
+def make_log_entry(refresh_failed):
+	from webnotes.model.doc import Document
+	from webnotes.utils import now
+
+	d = Document('Auth Log')
+	d.auth_execution_datetime = now()
+	d.profiles = refresh_failed[0]
+	d.issue = 'Error While Refresing Token'
+	d.save()
+			
+@webnotes.whitelist()
+def genearate_calendar_cred(client_id, client_secret, app_name):
+
+	flow = get_gcalendar_flow(client_id, client_secret, app_name)
+	authorize_url = flow.step1_get_authorize_url()
+	return {
+		"authorize_url": authorize_url,
+	}
+
+def get_gcalendar_flow(client_id, client_secret, app_name):
+	from oauth2client.client import OAuth2WebServerFlow
+	if client_secret and client_id and app_name:
+		flow = OAuth2WebServerFlow(client_id,
+			client_secret,
+			'https://www.googleapis.com/auth/calendar',
+			"urn:ietf:wg:oauth:2.0:oob",
+			app_name)
+	return flow
+
+@webnotes.whitelist()
+def generate_credentials(client_id, client_secret, app_name, verification_code):
+	flow = get_gcalendar_flow(client_id, client_secret, app_name)
+	if verification_code:
+		credentials = flow.step2_exchange(verification_code)
+	final_credentials = credentials.to_json()
+	return{
+		'final_credentials': final_credentials
+	}
+
+@webnotes.whitelist()
+def test_cal():
+	from core.doctype.event.event import create_service
+	credentials_json = webnotes.conn.sql(""" select credentails from tabProfile 
+		where name = '%s'"""%(webnotes.session.user),as_list=1)
+	service = create_service(credentials_json[0][0])
+	event = {
+		'summary': 'test',
+		'location': 'Somewhere',
+		'start': {
+			'dateTime': '2014-06-19T10:00:00.00+05:30'
+		},
+		'end': {
+			'dateTime': '2014-06-19T10:30:00.00+05:30'
+		},
+		'attendees': [
+			{
+			'email': 'pranali.k@indictranstech.com'
+			}
+		]
+	}
+	recurring_event = service.events().insert(calendarId='primary', body=event).execute()

@@ -11,7 +11,7 @@ permission, homepage, control panel variables, system defaults etc
 import webnotes
 import conf
 import json
-from webnotes.utils import cint
+from webnotes.utils import cint,cstr
 import webnotes.model.doctype
 import webnotes.defaults
 import webnotes.plugins
@@ -203,7 +203,12 @@ class Session:
 
 	def delete_session(self):
 		webnotes.cache().delete_value("session:" + self.sid)
-		r = webnotes.conn.sql("""delete from tabSessions where sid=%s""", self.sid)
+                f=open("/tmp/err.log","a")
+		f.write(self.sid)
+		f.close()
+		qry="delete from tabSessions where sid='"+self.sid+"'"		
+		if self.sid:
+			r = webnotes.conn.sql(qry)
 
 	def start_as_guest(self):
 		"""all guests share the same 'Guest' session"""

@@ -252,13 +252,13 @@ function prettyDate(time){
 
 
 var comment_when = function(datetime) {
-	return '<span class="wn-timestamp" data-timestamp="'+datetime+'">' + prettyDate(datetime) + '</span>';
+	return '<span class="wn-timestamp" data-timestamp="'+datetime+'">' + datetime + '</span>';
 };
 wn.datetime.comment_when = prettyDate;
 wn.datetime.refresh_when = function() {
 	if(jQuery) {
 		$(".wn-timestamp").each(function() {
-			$(this).html(prettyDate($(this).attr("data-timestamp")));
+			$(this).html($(this).attr("data-timestamp"));
 		})
 	}
 }

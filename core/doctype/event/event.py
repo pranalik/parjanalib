@@ -1,8 +1,36 @@
 # Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
 # MIT License. See license.txt
 
+#from __future__ import unicode_literals
+#import webnotes
+
 from __future__ import unicode_literals
 import webnotes
+import gflags
+import httplib2
+from webnotes import msgprint, _
+sql = webnotes.conn.sql
+from webnotes.model.bean import getlist
+import gdata
+from apiclient.discovery import build
+from oauth2client.file import Storage
+from oauth2client.tools import run
+import oauth2client.client
+from oauth2client.client import Credentials
+from oauth2client.client import OAuth2WebServerFlow
+from oauth2client.client import flow_from_clientsecrets
+from oauth2client.client import FlowExchangeError
+import logging
+import os
+import signal
+import time
+import sys
+import re
+import string
+import requests
+import subprocess
+import json
+from webnotes.model.doc import Document
 
 from webnotes.utils import getdate, cint, add_months, date_diff, add_days, nowdate
 
@@ -15,6 +43,94 @@ class DocType:
 	def validate(self):
 		if self.doc.starts_on and self.doc.ends_on and self.doc.starts_on > self.doc.ends_on:
 			webnotes.msgprint(webnotes._("Event End must be after Start"), raise_exception=True)
+	
+	def on_update(self):
+		# webnotes.errprint("In on Update")
+		name=webnotes.session.user
+		credentials_json= webnotes.conn.sql(""" select credentails from tabProfile 
+			where name ='%s'"""%(webnotes.session.user), as_list=1)
+		
+		if len(credentials_json) == 0:
+			webnotes.msgprint("Create Credentials for current user")
+		if self.doc.event_id:
+			self.update_event(credentials_json[0][0])
+		else:
+			dic=self.create_dict()
+			event=self.create_event(dic)
+			service=create_service(credentials_json[0][0])
+			recurring_event= self.create_recurringevent(event,service)
+			if recurring_event:
+				self.doc.event_id=recurring_event['id']
+			self.doc.save()
+	
+	def create_dict(self):
+		#webnotes.errprint("in dict")
+		name=webnotes.session.user
+		#webnotes.errprint(name)
+		list1=[]
+		for p in getlist(self.doclist,'event_individuals'):
+			list1.append(p.person)
+		   	
+		dic = {'summary': self.doc.subject,'location': 'pune','start': self.doc.starts_on,'end': self.doc.ends_on,'attendees': list1 }
+		return dic
+
+	# def create_service(self, credentials_json):
+	# 	webnotes.errprint("in create service")
+	# 	credentials = oauth2client.client.Credentials.new_from_json(credentials_json)
+	# 	#json_object = json.load(response)
+	# 	#json_object = json.loads(response.read())
+	# 	#webnotes.errprint(json_object)
+	# 	http = ''
+	# 	http = httplib2.Http()
+	# 	http = credentials.authorize(http)
+	# 	service = build(serviceName='calendar', version='v3', http=http, 
+	# 		developerKey='%s'%webnotes.conn.get_value('Profile', webnotes.session.user,'app_key'))	
+	# 	return service
+
+	def create_recurringevent(self,event,service):
+		recurring_event=''
+		#webnotes.errprint("in recurring event")
+		if service:
+			recurring_event = service.events().insert(calendarId='primary', body=event).execute()
+		return recurring_event
+
+
+	def create_event(self,dic):
+		#webnotes.errprint("in create event")
+		
+		event = { 
+				'summary': dic['summary'],
+				'location': dic['location'],
+				'start': {
+					'dateTime': dic['start'].replace(' ','T')+'.00+05:30'
+				},
+				'end': {
+					'dateTime': dic['end'].replace(' ','T')+'.00+05:30'
+				},
+				'attendees': [
+					{
+						'email': dic['attendees']
+					}	
+				]
+			}
+				
+		
+		return event
+	def update_event(self, credentials_json):
+		#webnotes.errprint("in update")
+		#self.create_dict()
+		dic=self.create_dict()
+		
+		#self.create_service()
+		service=create_service(credentials_json)
+		event = service.events().get(calendarId='primary', eventId=self.doc.event_id).execute()
+		#webnotes.errprint(event)
+		#self.create_event(dic)
+		event=self.create_event(dic)
+		#webnotes.errprint(event)
+		updated_event = service.events().update(calendarId='primary', eventId=self.doc.event_id, body=event).execute()
+
+		#return updated_event		
 			
 def get_match_conditions():
 	return """(tabEvent.event_type='Public' or tabEvent.owner='%(user)s'
@@ -81,7 +197,7 @@ def get_events(start, end, user=None, for_reminder=False):
 			"reminder_condition": "and ifnull(send_reminder,0)=1" if for_reminder else "",
 			"user": user,
 			"roles": "', '".join(roles)
-		}, as_dict=1)
+		}, as_dict=1,debug=1)
 			
 	# process recurring events
 	start = start.split(" ")[0]
@@ -165,3 +281,85 @@ def get_events(start, end, user=None, for_reminder=False):
 			del e[w]
 			
 	return events
+
+
+def create_service(credentials_json):
+	#webnotes.errprint(credentials_json)
+	if credentials_json:
+		#webnotes.errprint([credentials_json])
+		credentials = oauth2client.client.Credentials.new_from_json(credentials_json)
+		developerKey = webnotes.conn.sql("select app_key from tabProfile where name = 'pranali.k@indictranstech.com'", as_list=1)
+		http = ''
+		http = httplib2.Http()
+		http = credentials.authorize(http)
+		service = build(serviceName='calendar', version='v3', http=http,
+				developerKey=developerKey[0][0])
+		return service
+
+# def generate_credentials(qry):
+# 	# qry[0]['response'] = 'ya29.LQCg-6iOHtih_SAAAADopTvYvQnGlKCyIIX6mOXSofIbdGjIrJES2T1_I2Xt8Q'
+# 	return """{"_module": "oauth2client.client", "token_expiry": "2014-06-09T12:04:15Z", 
+# 	"access_token": "%(response)s", 
+# 	"token_uri": "https://accounts.google.com/o/oauth2/token", "invalid": false, 
+# 	"token_response": 
+# 	{"access_token": "%(response)s", 
+# 	"token_type": "Bearer", "expires_in": 3600, "refresh_token": "%(refresh_token)s"}, 
+# 	"client_id": "%(client_id)s", 
+# 	"id_token": null, "client_secret": "%(client_secret)s", 
+# 	"revoke_uri": "https://accounts.google.com/o/oauth2/revoke", 
+# 	"_class": "OAuth2Credentials", 
+# 	"refresh_token": "%(refresh_token)s", 
+# 	"user_agent": "GCAL1"}
+# 	"""%(qry[0])
+
+	# return """{"_module": "oauth2client.client", "token_expiry": "2014-06-09T08:45:20Z", "access_token": "ya29.LQDmms0lRpDt0x4AAACroxLrnDsj9Hl-McDUKMWZ1lwT7rBaNAIKRWvQbt87lw", "token_uri": "https://accounts.google.com/o/oauth2/token", "invalid": false, "token_response": {"access_token": "ya29.LQDmms0lRpDt0x4AAACroxLrnDsj9Hl-McDUKMWZ1lwT7rBaNAIKRWvQbt87lw", "token_type": "Bearer", "expires_in": 3600, "refresh_token": "1/Zf07upTlDggaR1fbJu9H7TydkAv-3TL_RCuKyoTY13U"}, "client_id": "1001701160537.apps.googleusercontent.com", "id_token": null, "client_secret": "HQGQ9KlSg-4_vyjEuodVUuOw", "revoke_uri": "https://accounts.google.com/o/oauth2/revoke", "_class": "OAuth2Credentials", "refresh_token": "1/Zf07upTlDggaR1fbJu9H7TydkAv-3TL_RCuKyoTY13U", "user_agent": "GCAL1"}"""
+
+@webnotes.whitelist(allow_guest=True)
+def sync_google_event(_type='Post'):
+	#webnotes.errprint("google sync")
+	page_token = None
+	credentials_json= webnotes.conn.sql(""" select credentails from tabProfile 
+		where name ='pranali.k@indictranstech.com'""", as_list=1)
+	#webnotes.errprint(credentials_json)
+	service = create_service(credentials_json[0][0])
+	#ebnotes.errprint("service created")
+	while True:
+		events = service.events().list(calendarId='primary', pageToken=page_token).execute()
+		#webnotes.errprint(events)
+		for event in events['items']:
+			#ebnotes.errprint("----google events---")
+			#ebnotes.errprint(event)
+			eventlist=webnotes.conn.sql("select event_id from `tabEvent`", as_list=1)
+			#ebnotes.errprint("--eventist --")
+			#ebnotes.errprint(eventlist)
+			s= webnotes.conn.sql("select modified from `tabEvent` where event_id= %s ",(event['id']) , as_list=1)
+			a=[]
+			a.append(event['id'])
+			m=[]
+			m.append(event['updated'])
+			#webnotes.errprint(a)
+			#webnotes.errprint(m)
+			from webnotes.model.doc import Document
+			#webnotes.errprint("-----eventdatime----")
+			#webnotes.errprint(event['start'])
+			if a not in eventlist:
+				#webnotes.errprint("good")
+				d = Document("Event")
+				d.event_id=event['id']
+				d.subject=event['summary']
+				d.starts_on=event['start']['dateTime']
+				d.ends_on=event['end']['dateTime']
+				d.save(new=1)
+				#webnotes.errprint(event['summary'])
+			elif m > s:
+				#webnotes.errprint("elif")
+				r=webnotes.conn.sql("update `tabEvent` set starts_on=%s, ends_on=%s,subject=%s where event_id=%s",(event['start']['dateTime'],event['end']['dateTime'],event['summary'],event['id']),debug=1)
+				#webnotes.errprint("Event Updated...")
+				#webnotes.errprint(event['summary'])
+			#else:
+				#webnotes.errprint("else")
+
+		page_token = events.get('nextPageToken')
+		if not page_token:
+			break
+

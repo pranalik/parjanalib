@@ -2,7 +2,7 @@
  {
   "creation": "2013-03-07 11:54:44", 
   "docstatus": 0, 
-  "modified": "2013-11-03 11:10:54", 
+  "modified": "2014-07-02 02:28:30", 
   "modified_by": "Administrator", 
   "owner": "Administrator"
  }, 
@@ -315,6 +315,107 @@
   "hidden": 1, 
   "label": "Profile Defaults", 
   "options": "DefaultValue"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "sb9", 
+  "fieldtype": "Section Break", 
+  "label": "OAuth Settings", 
+  "read_only": 1
+ }, 
+ {
+  "default": "No", 
+  "doctype": "DocField", 
+  "fieldname": "sync_email", 
+  "fieldtype": "Select", 
+  "label": "Sync email", 
+  "options": "No\nyes"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "client_id", 
+  "fieldtype": "Data", 
+  "label": "Client Id"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "client_secret", 
+  "fieldtype": "Data", 
+  "label": "Client Secret"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "app_name", 
+  "fieldtype": "Data", 
+  "label": "App Name"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "app_key", 
+  "fieldtype": "Data", 
+  "label": "App Key"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "redirect_url", 
+  "fieldtype": "Button", 
+  "label": "Redirect Url"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "authorize_token", 
+  "fieldtype": "Data", 
+  "label": "Authorize Token"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "generate_access_token", 
+  "fieldtype": "Button", 
+  "label": "Generate Access Token"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "response", 
+  "fieldtype": "Data", 
+  "label": "Response"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "refresh_token", 
+  "fieldtype": "Data", 
+  "hidden": 0, 
+  "label": "Refresh Token", 
+  "read_only": 0
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "oauth_settings_for_calndar", 
+  "fieldtype": "Section Break", 
+  "label": "OAuth Settings for Calndar"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "generate_token", 
+  "fieldtype": "Button", 
+  "label": "Generate Token"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "token_for_calendar", 
+  "fieldtype": "Data", 
+  "label": "Token For Calendar"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "generate_credentials", 
+  "fieldtype": "Button", 
+  "label": "Generate Credentials"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "credentails", 
+  "fieldtype": "Small Text", 
+  "label": "Credentails"
  }, 
  {
   "doctype": "DocField", 

@@ -102,7 +102,7 @@ def send_comm_email(d, name, sent_via=None, print_html=None, attachments='[]', s
 		
 	from webnotes.utils.email_lib.smtp import get_email
 	mail = get_email(d.recipients, sender=d.sender, subject=d.subject, 
-		msg=d.content, footer=footer)
+		msg=d.content, footer=footer,doctype=d.parenttype)
 	
 	if send_me_a_copy:
 		mail.cc.append(webnotes.conn.get_value("Profile", webnotes.session.user, "email"))

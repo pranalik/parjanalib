@@ -1,0 +1,138 @@
+[
+ {
+  "creation": "2014-06-20 10:02:56", 
+  "docstatus": 0, 
+  "modified": "2014-06-24 06:08:00", 
+  "modified_by": "Administrator", 
+  "owner": "Administrator"
+ }, 
+ {
+  "autoname": "OA.#######", 
+  "doctype": "DocType", 
+  "issingle": 1, 
+  "module": "Core", 
+  "name": "__common__"
+ }, 
+ {
+  "doctype": "DocField", 
+  "name": "__common__", 
+  "parent": "OAuth Settings", 
+  "parentfield": "fields", 
+  "parenttype": "DocType", 
+  "permlevel": 0
+ }, 
+ {
+  "cancel": 1, 
+  "create": 1, 
+  "doctype": "DocPerm", 
+  "name": "__common__", 
+  "parent": "OAuth Settings", 
+  "parentfield": "permissions", 
+  "parenttype": "DocType", 
+  "permlevel": 0, 
+  "read": 1, 
+  "role": "All", 
+  "write": 1
+ }, 
+ {
+  "doctype": "DocType", 
+  "name": "OAuth Settings"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "user_credentials", 
+  "fieldtype": "Section Break", 
+  "label": "User Credentials"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "client_id", 
+  "fieldtype": "Data", 
+  "label": "Client Id"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "client_secret", 
+  "fieldtype": "Data", 
+  "label": "Client Secret"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "app_key", 
+  "fieldtype": "Data", 
+  "label": "App key"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "app_name", 
+  "fieldtype": "Data", 
+  "label": "App Name"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "generate_access_token", 
+  "fieldtype": "Section Break", 
+  "label": "Generate Access Token"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "user", 
+  "fieldtype": "Link", 
+  "label": "User", 
+  "options": "Profile"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "get_verification_code", 
+  "fieldtype": "Button", 
+  "label": "Get Verification Code For Emails"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "verification_code", 
+  "fieldtype": "Data", 
+  "label": "Verification Code For Emails"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "column_break_10", 
+  "fieldtype": "Column Break"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "get_verification_code_for_calender", 
+  "fieldtype": "Button", 
+  "label": "Get Verification Code For Calendar"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "verification_code_for_calender", 
+  "fieldtype": "Data", 
+  "label": "Verification code for Calendar"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "section_break_13", 
+  "fieldtype": "Section Break"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "generate_token", 
+  "fieldtype": "Button", 
+  "label": "Generate Token For Emails"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "column_break_15", 
+  "fieldtype": "Column Break"
+ }, 
+ {
+  "doctype": "DocField", 
+  "fieldname": "generate_credentials", 
+  "fieldtype": "Button", 
+  "label": "Generate Token Calendar"
+ }, 
+ {
+  "doctype": "DocPerm"
+ }
+]

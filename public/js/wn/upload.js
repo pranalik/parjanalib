@@ -18,9 +18,13 @@ wn.upload = {
 					+ (opts.sample_url || 'e.g. http://example.com/somefile.png') + 
 				'</p>\
 			</div>\
+			<button class="add_new">Add New Attachment</button>\
 			<button class="btn btn-info btn-upload"><i class="icon-upload"></i> ' +wn._('Upload')
 				+'</button></div>').appendTo(opts.parent);
 	
+		$upload.find(".add_new").click(function(){
+			var $upload1 = $('<input class="alert alert-info" style="padding: 7px; margin: 7px 0px;" type="file" name="filedata" />').appendTo($upload.find(".action-attach-input"));
+		})
 
 		$upload.find(".action-link").click(function() {
 			$upload.find(".action-attach").removeClass("disabled");
@@ -64,8 +68,11 @@ wn.upload = {
 			
 			opts.args.file_url = $upload.find('[name="file_url"]').val();
 
-			var fileobj = $upload.find(":file").get(0).files[0];
-			wn.upload.upload_file(fileobj, opts.args, opts);
+			for(var i=0;i<($upload.find(":file")).length;i++)
+			{
+					var fileobj = $upload.find(":file").get(i).files[0];
+					wn.upload.upload_file(fileobj, opts.args, opts);					
+			}
 		})
 	},
 	upload_file: function(fileobj, args, opts) {

@@ -40,6 +40,9 @@ def add(args=None):
 		d.assigned_by = args.get('assigned_by', webnotes.user.name)
 		d.save(1)
 		
+		if args['doctype']=='Opportunity':
+			update_assign_to(args)
+		
 		# set assigned_to if field exists
 		from webnotes.model.meta import has_field
 		if has_field(args['doctype'], "assigned_to"):
@@ -61,6 +64,20 @@ def add(args=None):
 	return get(args)
 
 @webnotes.whitelist()
+def update_assign_to(args):
+	owner_list=webnotes.conn.sql("select owner from `tabToDo` where reference_type=%(doctype)s and reference_name=%(name)s ",args,as_list=1,debug=1)
+	#webnotes.errprint(owner_list)
+	if owner_list:
+		o_list=[]
+		n_list=''
+		for owner in owner_list:
+			o_list.append(owner[0])
+		n_list=','.join(o_list)
+		if n_list!='':
+			webnotes.conn.sql("update `tabOpportunity` set assigned='%s' where name='%s'"%(n_list,args['name']),debug=1)
+			webnotes.conn.sql("commit")
+
+@webnotes.whitelist()
 def remove(doctype, name, assign_to):
 	"""remove from todo"""
 	res = webnotes.conn.sql("""\
@@ -71,6 +88,9 @@ def remove(doctype, name, assign_to):
 	webnotes.conn.sql("""delete from `tabToDo`
 		where reference_type=%(doctype)s and reference_name=%(name)s
 		and owner=%(assign_to)s""", locals())
+
+	if locals()['doctype']=='Opportunity':
+		update_assign_to(locals())
 		
 	# clear assigned_to if field exists
 	from webnotes.model.meta import has_field

@@ -45,7 +45,7 @@ wn.ui.form.Comments = Class.extend({
 				c["delete"] = "";
 			}
 			c.image = wn.user_info(c.comment_by).image;
-			c.comment_on = dateutil.comment_when(c.creation);
+			c.comment_on = c.creation;
 			c.fullname = wn.user_info(c.comment_by).fullname;
 			
 			$(repl('<div class="comment alert alert-warning col-md-10" data-name="%(name)s">\

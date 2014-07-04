@@ -669,7 +669,8 @@ def get(dt, dn='', with_children = 1, from_controller = 0):
 
 def getsingle(doctype):
 	"""get single doc as dict"""
-	dataset = webnotes.conn.sql("select field, value from tabSingles where doctype=%s", doctype)
+	fts="select field, value from tabSingles where doctype='"+doctype+"'"
+	dataset = webnotes.conn.sql(fts)
 	return dict(dataset)
 	
 def copy_common_fields(from_doc, to_doc):
